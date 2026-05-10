@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>For My Soulmate</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@500;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; } /* Stops things from overflowing the screen */
+
+    body {
+      background: radial-gradient(circle at center, #4a0810, #0a0000); 
+      color: #f0e6d2;
+      font-family: 'Playfair Display', serif;
+      margin: 0;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none; 
+      overflow: hidden;
+    }
+
+    .screen {
+      display: none; 
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.8s ease;
+      opacity: 0;
+    }
+    .active { display: flex; opacity: 1; } 
+
+    /* --- 1. LOCK SCREEN --- */
+    .polaroid-lock {
+      background: #fcfcfc; padding: 10px 10px 25px 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+      transform: rotate(-2deg); margin-bottom: 40px; width: 140px; border-radius: 2px;
+    }
+    .polaroid-lock img { width: 100%; height: 140px; object-fit: cover; background-color: #333; filter: contrast(1.1) sepia(0.2); }
+    .passcode-title { font-size: 1.4rem; margin-bottom: 20px; font-weight: normal; font-style: italic; letter-spacing: 1px; color: #ffb6c1; }
+    .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 250px; margin: 0 auto; }
+    .key {
+      width: 65px; height: 65px; border-radius: 50%; border: 1px solid rgba(255,182,193,0.4);
+      background: rgba(0, 0, 0, 0.3); color: #f0e6d2; font-size: 1.5rem; font-family: 'Arial', sans-serif;
+      display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; backdrop-filter: blur(5px);
+    }
+    .key:active { background: rgba(255, 182, 193, 0.2); transform: scale(0.9); border-color: #ffb6c1; }
+    .dots { display: flex; justify-content: center; gap: 15px; margin-bottom: 40px; }
+    .dot { width: 14px; height: 14px; border: 1px solid #ffb6c1; border-radius: 50%; background: transparent; transition: 0.2s; }
+    .dot.filled { background: #ffb6c1; box-shadow: 0 0 10px #ffb6c1; }
+    .dot.error { border-color: #ff3333; background: #ff3333; box-shadow: 0 0 10px #ff3333; }
+    @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 50% { transform: translateX(10px); } 75% { transform: translateX(-10px); } }
+    .shake { animation: shake 0.4s ease-in-out; }
+
+    /* --- 2. CAMERA SCREEN --- */
+    #cameraScreen { 
+      background-color: #050505; 
+      flex-direction: column; 
+      justify-content: space-evenly; /* Evenly spaces the elements vertically */
+      padding: 20px 0; 
+    }
+    .camera-grid {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background-image: linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px);
+      background-size: 33.3% 33.3%; pointer-events: none;
+    }
+    .camera-text { color: #ffb6c1; font-style: italic; font-size: 1.2rem; margin: 0; opacity: 0.8; }
+    .viewfinder {
+      width: 85%; height: 60%; /* Shrunk slightly to give the button more breathing room */
+      border: 1px solid #333; position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center; border-radius: 10px;
+      background-color: #111; 
+      z-index: 2;
+    }
+    #liveCamera { 
+      width: 100%; height: 100%; object-fit: cover; 
+      transform: scaleX(-1); 
+      border-radius: 10px;
+    }
+    .camera-controls { display: flex; justify-content: center; align-items: center; width: 100%; position: relative; z-index: 5; }
+    .shutter-btn {
+      width: 75px; height: 75px; background-color: transparent; border: 4px solid #ffb6c1;
+      border-radius: 50%; cursor: pointer; pointer-events: auto; position: relative;
+    }
+    .shutter-btn::after {
+      content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 55px; height: 55px; background-color: #ffb6c1; border-radius: 50%; transition: 0.2s;
+    }
+    .shutter-btn:active::after { transform: translate(-50%, -50%) scale(0.8); background-color: #fff; }
+    #cameraFlash {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: white;
+      opacity: 0; z-index: 10; display: none; pointer-events: none;
+    }
+    .flash-active { display: block !important; animation: flashAnim 0.5s ease-out; }
+    @keyframes flashAnim { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }
+
+    /* --- 3. 3D FLIPPING POLAROID SCREEN --- */
+    .flip-container {
+      perspective: 1500px;
+      width: 90%;
+      max-width: 420px;
+      height: 82vh; 
+      margin-top: 10px;
+    }
+    .flip-inner {
+      width: 100%; height: 100%;
+      transition: transform 1s cubic-bezier(0.2, 0.8, 0.2, 1); 
+      transform-style: preserve-3d;
+      position: relative;
+    }
+    .flip-container.flipped .flip-inner { transform: rotateY(180deg); }
+    .flip-front, .flip-back {
+      width: 100%; height: 100%;
+      position: absolute; backface-visibility: hidden; 
+      border-radius: 3px; box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+    }
+
+    /* THE FRONT (Photo) */
+    .flip-front {
+      background-color: transparent;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .polaroid-frame {
+      background: #faf8f5; padding: 15px 15px 45px 15px; width: 100%; box-sizing: border-box;
+      transform: rotate(1deg); border-radius: 2px;
+    }
+    .polaroid-frame img { 
+      width: 100%; height: 380px; object-fit: cover; margin-bottom: 15px; 
+      filter: contrast(1.05) saturate(1.1); box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+    }
+    .polaroid-caption {
+      font-family: 'Dancing Script', cursive;
+      color: #2b1b1b; font-size: 2.2rem; text-align: center;
+      margin-top: 5px; line-height: 1;
+    }
+    .turn-btn {
+      margin-top: 40px; padding: 12px 35px; background: transparent;
+      border: 1px solid rgba(255,182,193,0.6); color: #ffb6c1; border-radius: 30px; cursor: pointer;
+      font-size: 1.1rem; font-family: 'Playfair Display', serif; font-style: italic; transition: 0.3s;
+    }
+    .turn-btn:active { background: rgba(255,182,193,0.1); }
+
+    /* THE BACK (Letter) */
+    .flip-back {
+      background: linear-gradient(135deg, #fffbf0 0%, #f4ebd8 100%); 
+      padding: 35px 25px;
+      box-sizing: border-box;
+      transform: rotateY(180deg); 
+      overflow-y: auto; 
+      touch-action: pan-y; 
+      border: 1px solid #e0d5c1;
+    }
+    
+    .letter-content {
+      font-family: 'Dancing Script', cursive;
+      color: #2c1a1d; 
+      font-size: 1.5rem; 
+      line-height: 1.6;
+      text-align: left;
+    }
+    
+    .letter-content strong { 
+      font-family: 'Playfair Display', serif; 
+      font-size: 1.4rem; display: block; margin-bottom: 25px; text-align: center; 
+      color: #590d16; font-style: italic; font-weight: bold;
+    }
+    
+    .letter-content p { 
+      margin-bottom: 12px; 
+      text-indent: 1.5em; 
+    }
+
+    .flip-back-btn {
+      display: block; width: 100%; padding: 15px 0; background: transparent; color: #590d16;
+      border: 1px solid #590d16; border-radius: 30px; font-size: 1.1rem; margin-top: 30px; 
+      cursor: pointer; text-align: center; font-family: 'Playfair Display', serif; font-style: italic;
+    }
+  </style>
+</head>
+<body>
+
+  <audio id="scrapbookBGM" src="scrapbook-song.mp3" loop></audio>
+
+  <div id="lockScreen" class="screen active">
+    <div class="polaroid-lock">
+      <img src="matching.jpg" alt="Matching PFP" onerror="this.src='//:0'; this.style.backgroundColor='#222';"> 
+    </div>
+    <div class="passcode-title">Hint: it's our special date</div>
+    <div class="dots" id="dots">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+    <div class="keypad">
+      <div class="key" onclick="press('1')">1</div><div class="key" onclick="press('2')">2</div><div class="key" onclick="press('3')">3</div>
+      <div class="key" onclick="press('4')">4</div><div class="key" onclick="press('5')">5</div><div class="key" onclick="press('6')">6</div>
+      <div class="key" onclick="press('7')">7</div><div class="key" onclick="press('8')">8</div><div class="key" onclick="press('9')">9</div>
+      <div class="key" style="visibility: hidden;"></div><div class="key" onclick="press('0')">0</div><div class="key" onclick="clearPIN()">⌫</div>
+    </div>
+  </div>
+
+  <div id="cameraScreen" class="screen">
+    <div id="cameraFlash"></div>
+    <div class="camera-grid"></div>
+    <div class="camera-text">Who's dis diva? </div>
+    <div class="viewfinder">
+      <video id="liveCamera" autoplay playsinline muted></video>
+    </div>
+    <div class="camera-controls">
+      <div class="shutter-btn" onclick="takePhoto()"></div>
+    </div>
+  </div>
+
+  <div id="photoResultScreen" class="screen">
+    <div class="flip-container" id="flipBox">
+      <div class="flip-inner">
+        <div class="flip-front">
+          <div class="polaroid-frame">
+            <img src="her.jpg" alt="Her Photo" onerror="this.src='//:0'; this.style.backgroundColor='#222';">
+            <div class="polaroid-caption">look who's so beautiful</div>
+          </div>
+          <button class="turn-btn" onclick="toggleFlip()">Turn Over ⤾</button>
+        </div>
+
+        <div class="flip-back">
+          <div class="letter-content">
+            <strong>To My Soulmate,</strong>
+            <p>I am writing this because sometimes, I fall short. I know there are moments where I fail to read your mind, times I make you sad when all I want is to see you smile, and days where I don't worship and pamper you the way you truly deserve. I am so sorry for those moments.</p>
+            <p>I know that sometimes things get hard. There are days when it feels like we're drifting away from each other—moments where you might worry that I’m losing interest, or my own overthinking makes me feel like you’re getting bored. I also know there are times you feel like I’m not being understanding enough, especially when you get busy or disappear for a bit. I know I can blow up your phone in those moments, but I need you to know it is <i>never</i> because I don't trust you. If I wasn't understanding, I would've been asking you all sort of questions and doubting you and which i don't. The truth is, I am just so anxiously attached to you. When you aren't around, my anxiety for your safety and my fear of losing you completely consumes me. If I ever seem overwhelming, please know it’s just my terrified heart trying to hold onto my whole world.</p>
+            <p>Every single time I look at that picture of you I keep in my wallet, or see our matching profile pictures, it immediately grounds me. It reminds me that I am holding onto the best thing that has ever happened to me. To me, you aren't just my girl; you are literally a goddess. You are my entire world. My everything. Nobody on this earth could ever love, respect, or look at you the way that I do.</p>
+            <p>Even after everything we've been through, every single time I look at you, I still get those crazy butterflies in my stomach. It’s like my heart completely skips a beat just hearing your laugh or seeing your name pop up on my phone. I still catch myself staring at you sometimes, completely amazed that out of billions of people, a goddess like you somehow ended up with me. You have this effortless way of making the rest of the world completely fade away.</p>
+            <p>I want to be the man who protects your peace, the one who makes you laugh until you can't breathe, and the one you feel the absolutely safest with at the end of every day.</p>
+            <p>I don't just want you for right now. I want to marry you. I want to build a whole life with you. I want to have a family with you and you only—just me, you, and our two little kids. I want to wake up next to you every single morning for the rest of my life and remind you exactly how much you mean to me.</p>
+            <p>Thank you for choosing me. Thank you for being mine.</p>
+          </div>
+          <button class="flip-back-btn" onclick="toggleFlip()">⤿ Look at Photo</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const bgm = document.getElementById('scrapbookBGM');
+    let cameraStream = null;
+
+    function setActiveScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+    }
+
+    // --- LIVE CAMERA LOGIC ---
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: "user" } // Front facing camera
+        });
+        cameraStream = stream;
+        document.getElementById('liveCamera').srcObject = stream;
+      } catch (err) {
+        console.log("Camera access denied or failed.", err);
+      }
+    }
+
+    function stopCamera() {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+      }
+    }
+
+    // --- LOCK SCREEN LOGIC ---
+    const correctPIN = "1710";
+    let enteredPIN = "";
+    const dots = document.querySelectorAll('.dot');
+    const dotsContainer = document.getElementById('dots');
+
+    function updateDots() {
+      dots.forEach((dot, index) => {
+        if (index < enteredPIN.length) { dot.classList.add('filled'); dot.classList.remove('error'); }
+        else { dot.classList.remove('filled', 'error'); }
+      });
+    }
+
+    function press(num) {
+      if (enteredPIN.length === 0 && bgm) {
+        bgm.play().catch(() => {}); 
+      }
+
+      if (enteredPIN.length < 4) {
+        enteredPIN += num; updateDots();
+        if (enteredPIN.length === 4) { setTimeout(checkPIN, 200); }
+      }
+    }
+
+    function clearPIN() { enteredPIN = enteredPIN.slice(0, -1); updateDots(); }
+
+    function checkPIN() {
+      if (enteredPIN === correctPIN) {
+        setActiveScreen('cameraScreen');
+        startCamera(); 
+        
+        document.querySelector('.shutter-btn').style.pointerEvents = 'none';
+        setTimeout(() => { document.querySelector('.shutter-btn').style.pointerEvents = 'auto'; }, 600);
+      } else {
+        dotsContainer.classList.add('shake');
+        dots.forEach(dot => dot.classList.add('error'));
+        setTimeout(() => { dotsContainer.classList.remove('shake'); enteredPIN = ""; updateDots(); }, 500);
+      }
+    }
+
+    // --- SNAP PHOTO LOGIC ---
+    function takePhoto() {
+      const flash = document.getElementById('cameraFlash');
+      flash.classList.add('flash-active');
+      
+      setTimeout(() => {
+        stopCamera(); 
+        setActiveScreen('photoResultScreen');
+      }, 200);
+
+      setTimeout(() => {
+        flash.classList.remove('flash-active');
+      }, 500);
+    }
+
+    // --- 3D FLIP LOGIC ---
+    function toggleFlip() {
+      const flipBox = document.getElementById('flipBox');
+      flipBox.classList.toggle('flipped');
+    }
+  </script>
+</body>
+</html>
